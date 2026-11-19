@@ -4,6 +4,20 @@ import { applyBuy, applySell, newBook, valuation } from "../lib/book.js";
 
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} is not ${b}`);
 
+test("a failed lookup (symbol null) keeps a known symbol on a second buy", () => {
+  const b = newBook(10);
+  applyBuy(b, { mint: "M", symbol: "DCTY", solIn: 1, tokensOut: 100 });
+  applyBuy(b, { mint: "M", symbol: null, solIn: 1, tokensOut: 100 });
+  assert.equal(b.positions.M.symbol, "DCTY");
+  assert.equal(b.trades.at(-1).symbol, "DCTY");
+});
+
+test("applyBuy stores a null symbol for a new position; the CLI resolves the fallback", () => {
+  const b = newBook(10);
+  applyBuy(b, { mint: "M", symbol: null, solIn: 1, tokensOut: 100 });
+  assert.equal(b.positions.M.symbol, null);
+});
+
 test("buying spends cash and opens a position", () => {
   const b = newBook(10);
   applyBuy(b, { mint: "M", symbol: "MEME", solIn: 2, tokensOut: 1000 });

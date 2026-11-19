@@ -2,8 +2,9 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { SOL_MINT, c, compact, footer, isAddress, main, parseArgs, pct, short, table } from "../lib/core.js";
+import { SOL_MINT, c, compact, footer, isAddress, main, parseArgs, pct, table } from "../lib/core.js";
 import { quote, tokenPrices } from "../lib/jupiter.js";
+import { resolveSymbol, symbolOf } from "../lib/tokens.js";
 import { applyBuy, applySell, newBook, valuation } from "../lib/book.js";
 
 const HELP = `memecoin-paper-trading: practise Solana memecoin trades with fake SOL at real prices
@@ -45,14 +46,6 @@ const sol = (n, d = 4) => `${n.toFixed(d)} SOL`;
 const plus = (n, d = 4) => { const s = n.toFixed(d); return /^-?0\.0+$/.test(s) ? s.replace("-", "") : (n > 0 ? "+" : "") + s; };
 const signed = (n, text) => (n === null ? c.dim("?") : Math.abs(n) < 5e-5 ? text : n > 0 ? c.green(text) : c.red(text));
 
-async function symbolOf(mint) {
-  try {
-    const res = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${mint}`, { signal: AbortSignal.timeout(8000) });
-    const pairs = await res.json();
-    return pairs?.[0]?.baseToken?.symbol || short(mint);
-  } catch { return short(mint); }
-}
-
 /** SOL you would receive selling every position now, using real quotes. */
 async function liveValues(book, slippage) {
   const values = new Map();
@@ -89,7 +82,8 @@ main(async () => {
     const size = Number(a2);
     if (!(size > 0)) throw new Error("Give the buy size in SOL, e.g. paper buy <mint> 0.5");
     if (size > book.cash + 1e-12) throw new Error(`Not enough paper SOL: you have ${sol(book.cash)}.`);
-    const [q, prices, symbol] = await Promise.all([quote(SOL_MINT, a1, size * LAMPORTS, slippage), tokenPrices([a1]), symbolOf(a1)]);
+    const [q, prices, fetchedSymbol] = await Promise.all([quote(SOL_MINT, a1, size * LAMPORTS, slippage), tokenPrices([a1]), symbolOf(a1)]);
+    const symbol = resolveSymbol(fetchedSymbol, book.positions[a1]?.symbol, a1);
     const decimals = prices.get(a1)?.decimals;
     if (decimals == null) throw new Error("Could not read this token's decimals from Jupiter.");
     const tokens = q.outAmount / 10 ** decimals;
