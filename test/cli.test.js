@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,4 +42,20 @@ test("paper portfolio says when a position got no quote and counts as 0 in equit
   assert.equal(code, 0);
   assert.match(stdout, /no route/);
   assert.match(stdout, /1 position got no quote, so it counts as 0 SOL in equity/);
+});
+
+test("buying the SOL mint is rejected before a quote or portfolio write", () => {
+  const file = join(mkdtempSync(join(tmpdir(), "paper-sol-buy-")), "portfolio.json");
+  const result = run(["buy", "So11111111111111111111111111111111111111112", "1", "--file", file]);
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stderr, /Your paper balance is already in SOL\. Pick a token mint to buy\./);
+  assert.equal(existsSync(file), false);
+});
+
+test("selling the SOL mint is rejected even when the portfolio has no position", () => {
+  const file = join(mkdtempSync(join(tmpdir(), "paper-sol-sell-")), "portfolio.json");
+  const result = run(["sell", "So11111111111111111111111111111111111111112", "all", "--file", file]);
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stderr, /Your paper balance is already in SOL\. Pick a token mint to buy\./);
+  assert.equal(existsSync(file), false);
 });

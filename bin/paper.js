@@ -81,6 +81,7 @@ main(async () => {
 
   if (cmd === "buy") {
     if (!isAddress(a1)) throw new Error("Usage: paper buy <mint> <sol>");
+    if (a1 === SOL_MINT) throw new Error("Your paper balance is already in SOL. Pick a token mint to buy.");
     const size = Number(a2);
     if (!(size > 0)) throw new Error("Give the buy size in SOL, e.g. paper buy <mint> 0.5");
     if (size > book.cash + 1e-12) throw new Error(`Not enough paper SOL: you have ${sol(book.cash)}.`);
@@ -101,6 +102,7 @@ main(async () => {
 
   if (cmd === "sell") {
     if (!isAddress(a1)) throw new Error("Usage: paper sell <mint> <percent|all>");
+    if (a1 === SOL_MINT) throw new Error("Your paper balance is already in SOL. Pick a token mint to buy.");
     const p = book.positions[a1];
     if (!p) throw new Error("You hold none of this token. Run \"paper portfolio\" to see positions.");
     const share = a2 === undefined || a2 === "all" ? 100 : Number(String(a2).replace("%", ""));
